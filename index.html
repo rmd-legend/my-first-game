@@ -4,64 +4,309 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Adventure Game</title>
+
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  background: #182b25;
+  background: #14251f;
   color: white;
   font-family: Arial, sans-serif;
   text-align: center;
+  user-select: none;
 }
-h1 { margin-top: 35px; }
+
+h1 {
+  margin: 15px 0 4px;
+  letter-spacing: 5px;
+}
+
+.subtitle {
+  color: #d7e8d0;
+  margin: 5px;
+}
+
 #game {
-  width: 90%;
-  max-width: 500px;
-  height: 350px;
-  margin: 25px auto;
-  background: linear-gradient(#8ac9e8, #d9e9a2 65%, #4d8b4c 65%);
-  border: 4px solid white;
-  border-radius: 12px;
+  width: 94%;
+  max-width: 700px;
+  height: 65vh;
+  min-height: 320px;
+  max-height: 480px;
+  margin: 18px auto;
   position: relative;
   overflow: hidden;
+  border: 3px solid white;
+  border-radius: 14px;
+  background: linear-gradient(
+    to bottom,
+    #69bce8 0%,
+    #c6e6e8 60%,
+    #a5c779 60%,
+    #477c43 100%
+  );
 }
-#hero {
+
+.sun {
   position: absolute;
-  bottom: 20px;
-  left: 40px;
-  font-size: 45px;
+  top: 25px;
+  right: 40px;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background: #ffe58a;
+  box-shadow: 0 0 35px #fff1a0;
 }
+
+.cloud {
+  position: absolute;
+  top: 65px;
+  left: 55px;
+  font-size: 50px;
+}
+
+.cloud.two {
+  left: auto;
+  right: 120px;
+  top: 110px;
+}
+
+.mountain {
+  position: absolute;
+  bottom: 95px;
+  width: 0;
+  height: 0;
+  border-left: 110px solid transparent;
+  border-right: 110px solid transparent;
+  border-bottom: 170px solid #668b79;
+}
+
+.mountain.one {
+  left: 10px;
+}
+
+.mountain.two {
+  right: -25px;
+  border-bottom-color: #829b80;
+  border-bottom-width: 135px;
+}
+
+.tree {
+  position: absolute;
+  bottom: 35px;
+  font-size: 65px;
+}
+
+.tree.one {
+  left: 15px;
+}
+
+.tree.two {
+  right: 15px;
+}
+
 #ground {
   position: absolute;
   bottom: 0;
-  height: 20px;
+  height: 35px;
   width: 100%;
-  background: #315e35;
+  background: #315c32;
+  border-top: 5px solid #82b84c;
 }
+
+#hero {
+  position: absolute;
+  left: 40px;
+  bottom: 35px;
+  font-size: 48px;
+  z-index: 3;
+  transform-origin: center;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin: 12px;
+}
+
 button {
-  padding: 14px 25px;
-  margin: 5px;
-  border: 0;
-  border-radius: 8px;
+  min-width: 85px;
+  padding: 15px 18px;
+  border: 2px solid white;
+  border-radius: 12px;
+  background: #315c42;
+  color: white;
   font-size: 17px;
+  font-weight: bold;
+  touch-action: none;
+}
+
+button:active {
+  background: #659a58;
+  transform: scale(.95);
+}
+
+#status {
+  color: #c9e7bc;
+  margin: 12px;
 }
 </style>
 </head>
+
 <body>
+
 <h1>ADVENTURE</h1>
-<p>Our journey begins...</p>
+<p class="subtitle">Our journey begins...</p>
+
 <div id="game">
+
+  <div class="sun"></div>
+  <div class="cloud">☁️</div>
+  <div class="cloud two">☁️</div>
+
+  <div class="mountain one"></div>
+  <div class="mountain two"></div>
+
+  <div class="tree one">🌳</div>
+  <div class="tree two">🌲</div>
+
   <div id="hero">🧑</div>
+
   <div id="ground"></div>
+
 </div>
-<button onclick="move(-20)">LEFT</button>
-<button onclick="move(20)">RIGHT</button>
+
+<div class="controls">
+  <button id="left">◀ LEFT</button>
+  <button id="jump">JUMP</button>
+  <button id="right">RIGHT ▶</button>
+</div>
+
+<p id="status">Explore your world!</p>
+
 <script>
+const hero = document.getElementById("hero");
+const game = document.getElementById("game");
+const statusText = document.getElementById("status");
+
 let x = 40;
-function move(amount) {
-  x = Math.max(0, Math.min(420, x + amount));
-  document.getElementById("hero").style.left = x + "px";
+let y = 0;
+let velocityY = 0;
+let jumping = false;
+let leftPressed = false;
+let rightPressed = false;
+
+const speed = 4;
+const gravity = 0.65;
+const jumpPower = 12;
+
+function updateHero() {
+  const maxX = game.clientWidth - hero.offsetWidth;
+
+  x = Math.max(0, Math.min(maxX, x));
+
+  hero.style.left = x + "px";
+  hero.style.bottom = (35 + y) + "px";
 }
+
+function startJump() {
+  if (jumping) return;
+
+  jumping = true;
+  velocityY = jumpPower;
+  statusText.textContent = "Jump!";
+}
+
+function gameLoop() {
+  if (leftPressed) x -= speed;
+  if (rightPressed) x += speed;
+
+  if (jumping) {
+    y += velocityY;
+    velocityY -= gravity;
+
+    if (y <= 0) {
+      y = 0;
+      velocityY = 0;
+      jumping = false;
+      statusText.textContent = "Explore your world!";
+    }
+  }
+
+  updateHero();
+  requestAnimationFrame(gameLoop);
+}
+
+function holdButton(id, direction) {
+  const button = document.getElementById(id);
+
+  button.addEventListener("pointerdown", function(event) {
+    event.preventDefault();
+
+    if (direction === "left") leftPressed = true;
+    if (direction === "right") rightPressed = true;
+
+    button.setPointerCapture(event.pointerId);
+  });
+
+  function release() {
+    if (direction === "left") leftPressed = false;
+    if (direction === "right") rightPressed = false;
+  }
+
+  button.addEventListener("pointerup", release);
+  button.addEventListener("pointercancel", release);
+  button.addEventListener("lostpointercapture", release);
+}
+
+holdButton("left", "left");
+holdButton("right", "right");
+
+document.getElementById("jump").addEventListener(
+  "pointerdown",
+  function(event) {
+    event.preventDefault();
+    startJump();
+  }
+);
+
+document.addEventListener("keydown", function(event) {
+  if (event.key === "ArrowLeft" || event.key === "a") {
+    leftPressed = true;
+  }
+
+  if (event.key === "ArrowRight" || event.key === "d") {
+    rightPressed = true;
+  }
+
+  if (event.key === " " || event.key === "ArrowUp") {
+    startJump();
+  }
+});
+
+document.addEventListener("keyup", function(event) {
+  if (event.key === "ArrowLeft" || event.key === "a") {
+    leftPressed = false;
+  }
+
+  if (event.key === "ArrowRight" || event.key === "d") {
+    rightPressed = false;
+  }
+});
+
+window.addEventListener("blur", function() {
+  leftPressed = false;
+  rightPressed = false;
+});
+
+window.addEventListener("resize", updateHero);
+
+updateHero();
+requestAnimationFrame(gameLoop);
 </script>
+
 </body>
 </html>
