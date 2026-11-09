@@ -3,310 +3,240 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Adventure Game</title>
-
+<title>King of Trees - 3D</title>
 <style>
-* {
-  box-sizing: border-box;
+*{margin:0;padding:0;box-sizing:border-box}
+body{overflow:hidden;background:#07120e;font-family:Arial}
+#info{
+position:fixed;top:18px;left:0;width:100%;
+text-align:center;color:#b8f5d9;
+letter-spacing:4px;font-size:20px;
+text-shadow:0 0 15px #24ffc1;
+pointer-events:none
 }
-
-body {
-  margin: 0;
-  background: #14251f;
-  color: white;
-  font-family: Arial, sans-serif;
-  text-align: center;
-  user-select: none;
-}
-
-h1 {
-  margin: 15px 0 4px;
-  letter-spacing: 5px;
-}
-
-.subtitle {
-  color: #d7e8d0;
-  margin: 5px;
-}
-
-#game {
-  width: 94%;
-  max-width: 700px;
-  height: 65vh;
-  min-height: 320px;
-  max-height: 480px;
-  margin: 18px auto;
-  position: relative;
-  overflow: hidden;
-  border: 3px solid white;
-  border-radius: 14px;
-  background: linear-gradient(
-    to bottom,
-    #69bce8 0%,
-    #c6e6e8 60%,
-    #a5c779 60%,
-    #477c43 100%
-  );
-}
-
-.sun {
-  position: absolute;
-  top: 25px;
-  right: 40px;
-  width: 55px;
-  height: 55px;
-  border-radius: 50%;
-  background: #ffe58a;
-  box-shadow: 0 0 35px #fff1a0;
-}
-
-.cloud {
-  position: absolute;
-  top: 65px;
-  left: 55px;
-  font-size: 50px;
-}
-
-.cloud.two {
-  left: auto;
-  right: 120px;
-  top: 110px;
-}
-
-.mountain {
-  position: absolute;
-  bottom: 95px;
-  width: 0;
-  height: 0;
-  border-left: 110px solid transparent;
-  border-right: 110px solid transparent;
-  border-bottom: 170px solid #668b79;
-}
-
-.mountain.one {
-  left: 10px;
-}
-
-.mountain.two {
-  right: -25px;
-  border-bottom-color: #829b80;
-  border-bottom-width: 135px;
-}
-
-.tree {
-  position: absolute;
-  bottom: 35px;
-  font-size: 65px;
-}
-
-.tree.one {
-  left: 15px;
-}
-
-.tree.two {
-  right: 15px;
-}
-
-#ground {
-  position: absolute;
-  bottom: 0;
-  height: 35px;
-  width: 100%;
-  background: #315c32;
-  border-top: 5px solid #82b84c;
-}
-
-#hero {
-  position: absolute;
-  left: 40px;
-  bottom: 35px;
-  font-size: 48px;
-  z-index: 3;
-  transform-origin: center;
-}
-
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin: 12px;
-}
-
-button {
-  min-width: 85px;
-  padding: 15px 18px;
-  border: 2px solid white;
-  border-radius: 12px;
-  background: #315c42;
-  color: white;
-  font-size: 17px;
-  font-weight: bold;
-  touch-action: none;
-}
-
-button:active {
-  background: #659a58;
-  transform: scale(.95);
-}
-
-#status {
-  color: #c9e7bc;
-  margin: 12px;
+#help{
+position:fixed;bottom:15px;width:100%;
+text-align:center;color:#d5e9df;font-size:12px;
+pointer-events:none
 }
 </style>
 </head>
-
 <body>
+<div id="info">KING OF TREES</div>
+<div id="help">DRAG TO LOOK • PINCH TO ZOOM</div>
 
-<h1>ADVENTURE</h1>
-<p class="subtitle">Our journey begins...</p>
+<script type="module">
+import * as THREE from
+'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
-<div id="game">
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07150f);
+scene.fog = new THREE.FogExp2(0x07150f,0.009);
 
-  <div class="sun"></div>
-  <div class="cloud">☁️</div>
-  <div class="cloud two">☁️</div>
-
-  <div class="mountain one"></div>
-  <div class="mountain two"></div>
-
-  <div class="tree one">🌳</div>
-  <div class="tree two">🌲</div>
-
-  <div id="hero">🧑</div>
-
-  <div id="ground"></div>
-
-</div>
-
-<div class="controls">
-  <button id="left">◀ LEFT</button>
-  <button id="jump">JUMP</button>
-  <button id="right">RIGHT ▶</button>
-</div>
-
-<p id="status">Explore your world!</p>
-
-<script>
-const hero = document.getElementById("hero");
-const game = document.getElementById("game");
-const statusText = document.getElementById("status");
-
-let x = 40;
-let y = 0;
-let velocityY = 0;
-let jumping = false;
-let leftPressed = false;
-let rightPressed = false;
-
-const speed = 4;
-const gravity = 0.65;
-const jumpPower = 12;
-
-function updateHero() {
-  const maxX = game.clientWidth - hero.offsetWidth;
-
-  x = Math.max(0, Math.min(maxX, x));
-
-  hero.style.left = x + "px";
-  hero.style.bottom = (35 + y) + "px";
-}
-
-function startJump() {
-  if (jumping) return;
-
-  jumping = true;
-  velocityY = jumpPower;
-  statusText.textContent = "Jump!";
-}
-
-function gameLoop() {
-  if (leftPressed) x -= speed;
-  if (rightPressed) x += speed;
-
-  if (jumping) {
-    y += velocityY;
-    velocityY -= gravity;
-
-    if (y <= 0) {
-      y = 0;
-      velocityY = 0;
-      jumping = false;
-      statusText.textContent = "Explore your world!";
-    }
-  }
-
-  updateHero();
-  requestAnimationFrame(gameLoop);
-}
-
-function holdButton(id, direction) {
-  const button = document.getElementById(id);
-
-  button.addEventListener("pointerdown", function(event) {
-    event.preventDefault();
-
-    if (direction === "left") leftPressed = true;
-    if (direction === "right") rightPressed = true;
-
-    button.setPointerCapture(event.pointerId);
-  });
-
-  function release() {
-    if (direction === "left") leftPressed = false;
-    if (direction === "right") rightPressed = false;
-  }
-
-  button.addEventListener("pointerup", release);
-  button.addEventListener("pointercancel", release);
-  button.addEventListener("lostpointercapture", release);
-}
-
-holdButton("left", "left");
-holdButton("right", "right");
-
-document.getElementById("jump").addEventListener(
-  "pointerdown",
-  function(event) {
-    event.preventDefault();
-    startJump();
-  }
+const camera = new THREE.PerspectiveCamera(
+60,innerWidth/innerHeight,0.1,1500
 );
+camera.position.set(0,30,115);
+camera.lookAt(0,35,0);
 
-document.addEventListener("keydown", function(event) {
-  if (event.key === "ArrowLeft" || event.key === "a") {
-    leftPressed = true;
-  }
+const renderer = new THREE.WebGLRenderer({
+antialias:true
+});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
 
-  if (event.key === "ArrowRight" || event.key === "d") {
-    rightPressed = true;
-  }
+scene.add(new THREE.HemisphereLight(0x9bc9bd,0x18251a,2));
 
-  if (event.key === " " || event.key === "ArrowUp") {
-    startJump();
-  }
+const moon=new THREE.DirectionalLight(0xc4f6e5,2.5);
+moon.position.set(-80,150,100);
+moon.castShadow=true;
+scene.add(moon);
+
+// Ground
+const ground=new THREE.Mesh(
+new THREE.CircleGeometry(180,64),
+new THREE.MeshStandardMaterial({
+color:0x172b1c,roughness:1
+})
+);
+ground.rotation.x=-Math.PI/2;
+ground.position.y=-1;
+ground.receiveShadow=true;
+scene.add(ground);
+
+// Tree group
+const tree=new THREE.Group();
+scene.add(tree);
+
+const bark=new THREE.MeshStandardMaterial({
+color:0x49301e,roughness:0.95
 });
 
-document.addEventListener("keyup", function(event) {
-  if (event.key === "ArrowLeft" || event.key === "a") {
-    leftPressed = false;
-  }
-
-  if (event.key === "ArrowRight" || event.key === "d") {
-    rightPressed = false;
-  }
+const leafMaterial=new THREE.MeshStandardMaterial({
+color:0x164c38,
+emissive:0x087d69,
+emissiveIntensity:0.65,
+roughness:0.8
 });
 
-window.addEventListener("blur", function() {
-  leftPressed = false;
-  rightPressed = false;
+const blueLeaf=new THREE.MeshStandardMaterial({
+color:0x55e9dc,
+emissive:0x16cfc9,
+emissiveIntensity:2.5,
+roughness:0.5
 });
 
-window.addEventListener("resize", updateHero);
+// Main trunk
+const trunk=new THREE.Mesh(
+new THREE.CylinderGeometry(7,13,65,20,8),
+bark
+);
+trunk.position.y=32;
+trunk.castShadow=true;
+tree.add(trunk);
 
-updateHero();
-requestAnimationFrame(gameLoop);
+// Roots spreading underground and above ground
+for(let i=0;i<22;i++){
+const a=i*Math.PI*2/22;
+const root=new THREE.Mesh(
+new THREE.CylinderGeometry(0.4,3,27,10),
+bark
+);
+root.position.set(
+Math.cos(a)*12,1,Math.sin(a)*12
+);
+root.rotation.z=Math.cos(a)*0.8;
+root.rotation.x=Math.sin(a)*0.8;
+root.castShadow=true;
+tree.add(root);
+}
+
+// Giant spreading branches
+for(let i=0;i<18;i++){
+const a=i*Math.PI*2/18;
+const length=35+Math.random()*22;
+
+const branch=new THREE.Mesh(
+new THREE.CylinderGeometry(0.8,3.5,length,12),
+bark
+);
+branch.position.set(
+Math.cos(a)*length*0.35,
+55+Math.random()*15,
+Math.sin(a)*length*0.35
+);
+branch.rotation.z=-Math.cos(a)*0.9;
+branch.rotation.x=Math.sin(a)*0.9;
+branch.castShadow=true;
+tree.add(branch);
+}
+
+// Giant canopy clusters
+for(let i=0;i<75;i++){
+const a=Math.random()*Math.PI*2;
+const r=12+Math.random()*48;
+const y=75+Math.random()*32;
+
+const leaf=new THREE.Mesh(
+new THREE.IcosahedronGeometry(
+7+Math.random()*7,1
+),
+Math.random()<0.18?blueLeaf:leafMaterial
+);
+leaf.position.set(
+Math.cos(a)*r,y,Math.sin(a)*r
+);
+leaf.scale.y=0.55+Math.random()*0.5;
+leaf.castShadow=true;
+tree.add(leaf);
+}
+
+// Glowing magical leaves
+for(let i=0;i<100;i++){
+const a=Math.random()*Math.PI*2;
+const r=12+Math.random()*45;
+const leaf=new THREE.Mesh(
+new THREE.SphereGeometry(0.35+Math.random()*0.5,8,8),
+blueLeaf
+);
+leaf.position.set(
+Math.cos(a)*r,
+70+Math.random()*45,
+Math.sin(a)*r
+);
+tree.add(leaf);
+}
+
+// Magical floating particles
+const particles=[];
+const particleGeometry=new THREE.SphereGeometry(0.25,6,6);
+const particleMaterial=new THREE.MeshBasicMaterial({
+color:0x55f7d9
+});
+
+for(let i=0;i<130;i++){
+const p=new THREE.Mesh(
+particleGeometry,particleMaterial
+);
+p.position.set(
+(Math.random()-0.5)*120,
+Math.random()*110,
+(Math.random()-0.5)*100
+);
+p.userData.speed=0.02+Math.random()*0.05;
+scene.add(p);
+particles.push(p);
+}
+
+// Camera touch controls
+let dragging=false,lastX=0,lastY=0;
+let angle=0,tilt=0.25,distance=115;
+
+renderer.domElement.addEventListener('pointerdown',e=>{
+dragging=true;lastX=e.clientX;lastY=e.clientY;
+});
+window.addEventListener('pointerup',()=>dragging=false);
+window.addEventListener('pointermove',e=>{
+if(!dragging)return;
+angle-=(e.clientX-lastX)*0.005;
+tilt=Math.max(-0.1,Math.min(0.9,
+tilt+(e.clientY-lastY)*0.003));
+lastX=e.clientX;lastY=e.clientY;
+});
+renderer.domElement.addEventListener('wheel',e=>{
+distance=Math.max(55,Math.min(180,distance+e.deltaY*0.08));
+});
+
+// Animation
+function animate(){
+requestAnimationFrame(animate);
+
+const target=new THREE.Vector3(0,50,0);
+camera.position.set(
+Math.sin(angle)*distance*Math.cos(tilt),
+50+Math.sin(tilt)*distance,
+Math.cos(angle)*distance*Math.cos(tilt)
+);
+camera.lookAt(target);
+
+particles.forEach(p=>{
+p.position.y+=p.userData.speed;
+if(p.position.y>115)p.position.y=0;
+});
+
+tree.rotation.y+=0.0004;
+renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+camera.aspect=innerWidth/innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);
+});
 </script>
-
 </body>
 </html>
