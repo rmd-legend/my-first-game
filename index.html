@@ -7,44 +7,43 @@
 
 <style>
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 body {
   overflow: hidden;
-  background: #07131a;
+  background: #101d22;
   font-family: Arial, sans-serif;
   touch-action: none;
 }
 
 canvas {
   display: block;
-  width: 100%;
-  height: 100%;
 }
 
 #title {
   position: fixed;
-  top: 18px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  color: #d9faff;
+  color: #e2faff;
   font-size: 17px;
   letter-spacing: 3px;
-  text-shadow: 0 0 12px #00cfff;
+  text-shadow: 0 0 15px #00cfff;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 #help {
   position: fixed;
-  top: 48px;
+  top: 43px;
   left: 50%;
   transform: translateX(-50%);
   color: white;
   font-size: 11px;
-  opacity: .75;
+  opacity: .8;
   pointer-events: none;
   white-space: nowrap;
 }
@@ -53,35 +52,36 @@ canvas {
   position: fixed;
   bottom: 25px;
   left: 25px;
-  width: 125px;
-  height: 125px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
-  background: #ffffff22;
-  border: 2px solid #ffffff66;
+  background: #ffffff20;
+  border: 2px solid #ffffff70;
   touch-action: none;
 }
 
 #stick {
   position: absolute;
-  width: 48px;
-  height: 48px;
-  left: 36px;
-  top: 36px;
+  width: 50px;
+  height: 50px;
+  left: 38px;
+  top: 38px;
   border-radius: 50%;
-  background: #b8efffbb;
+  background: #c4f5ffcc;
   border: 2px solid white;
-  box-shadow: 0 0 15px #00cfff;
+  box-shadow: 0 0 18px #00cfff;
+  pointer-events: none;
 }
 
 #jump {
   position: fixed;
-  bottom: 42px;
+  bottom: 45px;
   right: 28px;
   width: 85px;
   height: 85px;
   border-radius: 50%;
-  border: 2px solid #b5efff;
-  background: #087daaaa;
+  border: 2px solid #c5f5ff;
+  background: #087daacc;
   color: white;
   font-size: 16px;
   font-weight: bold;
@@ -91,21 +91,22 @@ canvas {
 
 #status {
   position: fixed;
-  bottom: 12px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   color: white;
   font-size: 10px;
-  opacity: .65;
+  opacity: .7;
   pointer-events: none;
 }
+
 </style>
 </head>
 
 <body>
 
 <div id="title">ANCIENT TREE WORLD</div>
-<div id="help">DRAG SCREEN TO LOOK AROUND</div>
+<div id="help">DRAG THE SCREEN TO LOOK AROUND</div>
 
 <div id="joystick">
   <div id="stick"></div>
@@ -119,18 +120,20 @@ canvas {
 import * as THREE from
 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
-/* ---------------- SCENE ---------------- */
+/* =====================================
+   SCENE AND CAMERA
+===================================== */
 
 const scene = new THREE.Scene();
 
-scene.background = new THREE.Color(0x8db6c4);
-scene.fog = new THREE.Fog(0x8db6c4, 100, 330);
+scene.background = new THREE.Color(0x91b9c8);
+scene.fog = new THREE.FogExp2(0x91b9c8, 0.0028);
 
 const camera = new THREE.PerspectiveCamera(
   75,
   window.innerWidth / window.innerHeight,
   0.1,
-  500
+  650
 );
 
 camera.rotation.order = "YXZ";
@@ -141,207 +144,280 @@ const renderer = new THREE.WebGLRenderer({
 });
 
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+
 document.body.appendChild(renderer.domElement);
 
-/* ---------------- LIGHTING ---------------- */
+/* =====================================
+   LIGHTING
+===================================== */
 
-scene.add(new THREE.HemisphereLight(0xc8edff, 0x263d23, 2));
+scene.add(
+  new THREE.HemisphereLight(0xc9edff, 0x314327, 2.1)
+);
 
-const sunlight = new THREE.DirectionalLight(0xffedce, 2);
-sunlight.position.set(-70, 100, 50);
-scene.add(sunlight);
+const sun = new THREE.DirectionalLight(0xffe6bd, 2.5);
+sun.position.set(-90, 150, 70);
+scene.add(sun);
 
-/* ---------------- MATERIALS ---------------- */
+const treeLight = new THREE.PointLight(0x00aaff, 180, 90);
+treeLight.position.set(0, 42, 0);
+scene.add(treeLight);
+
+/* =====================================
+   PROCEDURAL TEXTURES
+===================================== */
+
+function makeTexture(base, dots, count) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, 256, 256);
+
+  for (let i = 0; i < count; i++) {
+    ctx.fillStyle = dots[Math.floor(Math.random() * dots.length)];
+    const x = Math.random() * 256;
+    const y = Math.random() * 256;
+    const size = 1 + Math.random() * 5;
+    ctx.fillRect(x, y, size, size);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  return texture;
+}
+
+const groundTexture = makeTexture(
+  "#496d35",
+  ["#385b2b", "#68874b", "#536d32", "#788a49"],
+  3500
+);
+
+groundTexture.repeat.set(35, 35);
+
+const barkTexture = makeTexture(
+  "#50331e",
+  ["#342319", "#745034", "#8b6040", "#402719"],
+  2200
+);
+
+barkTexture.repeat.set(2, 5);
+
+/* =====================================
+   MATERIALS
+===================================== */
 
 const groundMaterial = new THREE.MeshStandardMaterial({
-  color: 0x426d3b,
+  map: groundTexture,
   roughness: 1
 });
 
-const trunkMaterial = new THREE.MeshStandardMaterial({
-  color: 0x54351f,
+const barkMaterial = new THREE.MeshStandardMaterial({
+  map: barkTexture,
   roughness: 1
 });
 
 const rootMaterial = new THREE.MeshStandardMaterial({
-  color: 0x604027,
+  color: 0x59402a,
   roughness: 1
 });
 
-const leafMaterial = new THREE.MeshStandardMaterial({
-  color: 0x123e36,
+const forestMaterial = new THREE.MeshStandardMaterial({
+  color: 0x16432c,
   roughness: 1
 });
 
 const blueLeafMaterial = new THREE.MeshStandardMaterial({
-  color: 0x19bfff,
-  emissive: 0x007dbb,
-  emissiveIntensity: 1.8,
-  roughness: 0.5
+  color: 0x25caff,
+  emissive: 0x0088cc,
+  emissiveIntensity: 2,
+  roughness: 0.4
 });
 
-/* ---------------- GROUND ---------------- */
+/* =====================================
+   GROUND
+===================================== */
 
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(500, 500),
+  new THREE.PlaneGeometry(600, 600),
   groundMaterial
 );
 
 ground.rotation.x = -Math.PI / 2;
-ground.position.y = 0;
+ground.position.y = -0.1;
 scene.add(ground);
 
-/* ---------------- DISTANT MOUNTAINS ---------------- */
+/* =====================================
+   MOUNTAINS
+===================================== */
 
 function createMountain(x, z, height, radius) {
-  const mesh = new THREE.Mesh(
-    new THREE.ConeGeometry(radius, height, 7),
+  const mountain = new THREE.Mesh(
+    new THREE.ConeGeometry(radius, height, 8),
     new THREE.MeshStandardMaterial({
-      color: 0x526c72,
+      color: 0x536b6d,
       roughness: 1
     })
   );
 
-  mesh.position.set(x, height / 2 - 2, z);
-  scene.add(mesh);
+  mountain.position.set(x, height / 2 - 3, z);
+  scene.add(mountain);
+
+  const snow = new THREE.Mesh(
+    new THREE.ConeGeometry(radius * 0.28, height * 0.3, 8),
+    new THREE.MeshStandardMaterial({
+      color: 0xc3d5d2,
+      roughness: 1
+    })
+  );
+
+  snow.position.set(x, height * 0.84, z);
+  scene.add(snow);
 }
 
-for (let i = 0; i < 22; i++) {
-  const angle = i / 22 * Math.PI * 2;
-  const distance = 180 + Math.random() * 45;
+for (let i = 0; i < 26; i++) {
+  const angle = i / 26 * Math.PI * 2;
+  const distance = 205 + Math.random() * 55;
 
   createMountain(
     Math.sin(angle) * distance,
     Math.cos(angle) * distance,
-    45 + Math.random() * 65,
-    25 + Math.random() * 25
+    55 + Math.random() * 65,
+    30 + Math.random() * 25
   );
 }
 
-/* ---------------- ANCIENT TREE ---------------- */
+/* =====================================
+   ANCIENT TREE
+===================================== */
 
 const tree = new THREE.Group();
 scene.add(tree);
 
-/* Main Trunk */
-
 const trunk = new THREE.Mesh(
-  new THREE.CylinderGeometry(8, 14, 65, 12),
-  trunkMaterial
+  new THREE.CylinderGeometry(8, 15, 72, 16),
+  barkMaterial
 );
 
-trunk.position.y = 32.5;
+trunk.position.y = 36;
 tree.add(trunk);
 
-/* Extra Trunk Details */
+/* Tree trunk details */
 
-for (let i = 0; i < 12; i++) {
-  const angle = i / 12 * Math.PI * 2;
+for (let i = 0; i < 14; i++) {
+  const angle = i / 14 * Math.PI * 2;
 
   const detail = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.2, 2.5, 55, 5),
+    new THREE.CylinderGeometry(0.8, 2.2, 62, 6),
     rootMaterial
   );
 
   detail.position.set(
-    Math.cos(angle) * 5,
-    32,
-    Math.sin(angle) * 5
+    Math.cos(angle) * 5.5,
+    34,
+    Math.sin(angle) * 5.5
   );
 
-  detail.rotation.z = Math.sin(angle) * 0.08;
   tree.add(detail);
 }
 
-/* Giant Roots */
+/* Giant spreading roots */
 
-for (let i = 0; i < 18; i++) {
-  const angle = i / 18 * Math.PI * 2;
+for (let i = 0; i < 22; i++) {
+  const angle = i / 22 * Math.PI * 2;
 
   const root = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.4, 3.5, 24, 7),
+    new THREE.CylinderGeometry(0.5, 3.7, 30, 8),
     rootMaterial
   );
 
   root.position.set(
-    Math.cos(angle) * 12,
-    1.2,
-    Math.sin(angle) * 12
+    Math.cos(angle) * 13,
+    1.5,
+    Math.sin(angle) * 13
   );
 
-  root.rotation.z = Math.cos(angle) * 0.9;
-  root.rotation.x = Math.sin(angle) * 0.9;
+  root.rotation.z = Math.cos(angle) * 1.0;
+  root.rotation.x = Math.sin(angle) * 1.0;
 
   tree.add(root);
 }
 
-/* Giant Branches */
+/* Giant branches */
 
-for (let i = 0; i < 13; i++) {
-  const angle = i / 13 * Math.PI * 2;
+for (let i = 0; i < 16; i++) {
+  const angle = i / 16 * Math.PI * 2;
 
   const branch = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.2, 4, 29, 7),
-    trunkMaterial
+    new THREE.CylinderGeometry(1.1, 3.5, 34, 8),
+    barkMaterial
   );
 
   branch.position.set(
-    Math.cos(angle) * 14,
-    49 + Math.random() * 12,
-    Math.sin(angle) * 14
+    Math.cos(angle) * 15,
+    52 + Math.random() * 13,
+    Math.sin(angle) * 15
   );
 
-  branch.rotation.z = Math.cos(angle) * 1.1;
-  branch.rotation.x = Math.sin(angle) * 1.1;
+  branch.rotation.z = Math.cos(angle) * 1.05;
+  branch.rotation.x = Math.sin(angle) * 1.05;
 
   tree.add(branch);
 }
 
-/* Large Green Canopy */
+/* Huge canopy */
 
-for (let i = 0; i < 48; i++) {
+for (let i = 0; i < 65; i++) {
   const angle = Math.random() * Math.PI * 2;
-  const distance = Math.random() * 32;
+  const distance = Math.random() * 37;
 
   const canopy = new THREE.Mesh(
-    new THREE.SphereGeometry(
-      10 + Math.random() * 9,
-      8,
-      7
-    ),
-    leafMaterial
+    new THREE.SphereGeometry(10 + Math.random() * 10, 9, 8),
+    new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(
+        0.30 + Math.random() * 0.08,
+        0.55,
+        0.19 + Math.random() * 0.12
+      ),
+      roughness: 1
+    })
   );
 
   canopy.position.set(
     Math.cos(angle) * distance,
-    65 + Math.random() * 30,
+    70 + Math.random() * 27,
     Math.sin(angle) * distance
   );
 
-  canopy.scale.y = 0.8 + Math.random() * 0.5;
+  canopy.scale.y = 0.75 + Math.random() * 0.45;
   tree.add(canopy);
 }
 
-/* Glowing Blue Leaves */
+/* Blue glowing leaves */
 
 const glowingLeaves = [];
 
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 145; i++) {
   const leaf = new THREE.Mesh(
-    new THREE.OctahedronGeometry(
-      0.35 + Math.random() * 0.5
-    ),
+    new THREE.OctahedronGeometry(0.3 + Math.random() * 0.5),
     blueLeafMaterial
   );
 
   const angle = Math.random() * Math.PI * 2;
-  const distance = 12 + Math.random() * 32;
+  const distance = 12 + Math.random() * 39;
 
   leaf.position.set(
     Math.cos(angle) * distance,
-    58 + Math.random() * 40,
+    59 + Math.random() * 42,
     Math.sin(angle) * distance
   );
 
@@ -349,29 +425,36 @@ for (let i = 0; i < 100; i++) {
   glowingLeaves.push(leaf);
 }
 
-/* ---------------- FOREST ---------------- */
+/* =====================================
+   FOREST TREES
+===================================== */
 
 function createForestTree(x, z, scale) {
   const group = new THREE.Group();
 
-  const stem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.5, 1.2, 9, 6),
-    trunkMaterial
+  const trunkMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 1.3, 10, 7),
+    barkMaterial
   );
 
-  stem.position.y = 4.5;
-  group.add(stem);
+  trunkMesh.position.y = 5;
+  group.add(trunkMesh);
 
-  const crown = new THREE.Mesh(
-    new THREE.ConeGeometry(4.5, 13, 7),
-    new THREE.MeshStandardMaterial({
-      color: 0x174b35,
-      roughness: 1
-    })
+  const crown1 = new THREE.Mesh(
+    new THREE.ConeGeometry(5, 13, 8),
+    forestMaterial
   );
 
-  crown.position.y = 12;
-  group.add(crown);
+  crown1.position.y = 12;
+  group.add(crown1);
+
+  const crown2 = new THREE.Mesh(
+    new THREE.ConeGeometry(4, 11, 8),
+    forestMaterial
+  );
+
+  crown2.position.y = 18;
+  group.add(crown2);
 
   group.position.set(x, 0, z);
   group.scale.setScalar(scale);
@@ -379,26 +462,148 @@ function createForestTree(x, z, scale) {
   scene.add(group);
 }
 
-for (let i = 0; i < 95; i++) {
+for (let i = 0; i < 150; i++) {
   const angle = Math.random() * Math.PI * 2;
-  const distance = 35 + Math.random() * 115;
+  const distance = 35 + Math.random() * 150;
 
-  createForestTree(
-    Math.cos(angle) * distance,
-    Math.sin(angle) * distance,
-    0.7 + Math.random() * 1.5
-  );
+  const x = Math.cos(angle) * distance;
+  const z = Math.sin(angle) * distance;
+
+  if (Math.hypot(x, z) > 32) {
+    createForestTree(
+      x,
+      z,
+      0.8 + Math.random() * 1.5
+    );
+  }
 }
 
-/* ---------------- MAGICAL PARTICLES ---------------- */
+/* =====================================
+   GRASS
+===================================== */
+
+const grassMaterial = new THREE.MeshStandardMaterial({
+  color: 0x71934a,
+  roughness: 1
+});
+
+const grassGeometry = new THREE.ConeGeometry(0.12, 1.1, 3);
+const grassMesh = new THREE.InstancedMesh(
+  grassGeometry,
+  grassMaterial,
+  1800
+);
+
+const dummy = new THREE.Object3D();
+
+for (let i = 0; i < 1800; i++) {
+  const x = (Math.random() - 0.5) * 280;
+  const z = (Math.random() - 0.5) * 280;
+
+  dummy.position.set(x, 0.45, z);
+  dummy.rotation.z = (Math.random() - 0.5) * 0.5;
+  dummy.rotation.y = Math.random() * Math.PI;
+  dummy.scale.setScalar(0.5 + Math.random());
+  dummy.updateMatrix();
+
+  grassMesh.setMatrixAt(i, dummy.matrix);
+}
+
+scene.add(grassMesh);
+
+/* =====================================
+   ROCKS
+===================================== */
+
+const rockMaterial = new THREE.MeshStandardMaterial({
+  color: 0x62675e,
+  roughness: 1
+});
+
+for (let i = 0; i < 65; i++) {
+  const rock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(
+      0.7 + Math.random() * 1.7,
+      0
+    ),
+    rockMaterial
+  );
+
+  rock.position.set(
+    (Math.random() - 0.5) * 230,
+    0.5,
+    (Math.random() - 0.5) * 230
+  );
+
+  rock.rotation.set(
+    Math.random(),
+    Math.random(),
+    Math.random()
+  );
+
+  scene.add(rock);
+}
+
+/* =====================================
+   RIVER
+===================================== */
+
+const riverMaterial = new THREE.MeshStandardMaterial({
+  color: 0x267d9d,
+  roughness: 0.22,
+  metalness: 0.15,
+  transparent: true,
+  opacity: 0.88
+});
+
+const river = new THREE.Mesh(
+  new THREE.PlaneGeometry(260, 24),
+  riverMaterial
+);
+
+river.rotation.x = -Math.PI / 2;
+river.position.set(0, 0.12, -72);
+scene.add(river);
+
+/* River banks */
+
+for (let side of [-1, 1]) {
+  const bank = new THREE.Mesh(
+    new THREE.BoxGeometry(260, 1.2, 5),
+    new THREE.MeshStandardMaterial({
+      color: 0x756044,
+      roughness: 1
+    })
+  );
+
+  bank.position.set(0, 0.1, -72 + side * 14);
+  scene.add(bank);
+}
+
+/* Simple bridge */
+
+const bridge = new THREE.Mesh(
+  new THREE.BoxGeometry(13, 0.8, 30),
+  new THREE.MeshStandardMaterial({
+    color: 0x76502f,
+    roughness: 1
+  })
+);
+
+bridge.position.set(30, 1, -72);
+scene.add(bridge);
+
+/* =====================================
+   MAGICAL PARTICLES
+===================================== */
 
 const particles = [];
 
-for (let i = 0; i < 45; i++) {
+for (let i = 0; i < 65; i++) {
   const particle = new THREE.Mesh(
-    new THREE.SphereGeometry(0.16, 6, 6),
+    new THREE.SphereGeometry(0.13, 6, 6),
     new THREE.MeshBasicMaterial({
-      color: 0x65dfff
+      color: 0x65ddff
     })
   );
 
@@ -412,12 +617,14 @@ for (let i = 0; i < 45; i++) {
   particles.push(particle);
 }
 
-/* ---------------- PLAYER ---------------- */
+/* =====================================
+   PLAYER
+===================================== */
 
 const player = {
   x: 0,
   y: 1.7,
-  z: 115,
+  z: 135,
   velocityY: 0,
   grounded: true
 };
@@ -425,10 +632,9 @@ const player = {
 let yaw = 0;
 let pitch = 0;
 
-camera.position.set(player.x, player.y, player.z);
-camera.rotation.set(0, 0, 0);
-
-/* ---------------- MOVEMENT INPUT ---------------- */
+/* =====================================
+   KEYBOARD
+===================================== */
 
 const keys = {};
 
@@ -445,7 +651,9 @@ window.addEventListener("keyup", (event) => {
   keys[event.key.toLowerCase()] = false;
 });
 
-/* ---------------- JOYSTICK ---------------- */
+/* =====================================
+   MOBILE JOYSTICK
+===================================== */
 
 const joystick = document.getElementById("joystick");
 const stick = document.getElementById("stick");
@@ -463,12 +671,12 @@ function updateJoystick(event) {
   let dx = event.clientX - centerX;
   let dy = event.clientY - centerY;
 
-  const max = 38;
-  const length = Math.hypot(dx, dy);
+  const max = 40;
+  const distance = Math.hypot(dx, dy);
 
-  if (length > max) {
-    dx = dx / length * max;
-    dy = dy / length * max;
+  if (distance > max) {
+    dx = dx / distance * max;
+    dy = dy / distance * max;
   }
 
   joyX = dx / max;
@@ -492,7 +700,6 @@ joystick.addEventListener("pointermove", (event) => {
 
   event.preventDefault();
   event.stopPropagation();
-
   updateJoystick(event);
 });
 
@@ -506,7 +713,9 @@ function resetJoystick() {
 joystick.addEventListener("pointerup", resetJoystick);
 joystick.addEventListener("pointercancel", resetJoystick);
 
-/* ---------------- JUMP ---------------- */
+/* =====================================
+   JUMP
+===================================== */
 
 function jump() {
   if (player.grounded) {
@@ -524,7 +733,9 @@ document.getElementById("jump").addEventListener(
   }
 );
 
-/* ---------------- LOOK AROUND ---------------- */
+/* =====================================
+   CAMERA LOOK
+===================================== */
 
 let looking = false;
 let lastX = 0;
@@ -550,10 +761,7 @@ renderer.domElement.addEventListener("pointermove", (event) => {
   yaw -= dx * 0.004;
   pitch -= dy * 0.004;
 
-  pitch = Math.max(
-    -1.35,
-    Math.min(1.35, pitch)
-  );
+  pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
 });
 
 renderer.domElement.addEventListener("pointerup", () => {
@@ -564,7 +772,9 @@ renderer.domElement.addEventListener("pointercancel", () => {
   looking = false;
 });
 
-/* ---------------- ANIMATION ---------------- */
+/* =====================================
+   ANIMATION
+===================================== */
 
 const clock = new THREE.Clock();
 
@@ -572,8 +782,9 @@ function animate() {
   requestAnimationFrame(animate);
 
   const delta = Math.min(clock.getDelta(), 0.04);
+  const time = clock.elapsedTime;
 
-  /* Keyboard Movement */
+  /* Read movement input */
 
   let forward = 0;
   let sideways = 0;
@@ -583,37 +794,49 @@ function animate() {
   if (keys["a"] || keys["arrowleft"]) sideways -= 1;
   if (keys["d"] || keys["arrowright"]) sideways += 1;
 
-  /* Joystick Movement */
+  /* Joystick up = forward, down = backward */
 
   forward += -joyY;
   sideways += joyX;
 
-  const length = Math.hypot(forward, sideways);
+  const inputLength = Math.hypot(forward, sideways);
 
-  if (length > 1) {
-    forward /= length;
-    sideways /= length;
+  if (inputLength > 1) {
+    forward /= inputLength;
+    sideways /= inputLength;
   }
 
-  const speed = 15;
+  const speed = 12;
+
+  /*
+    FIXED CAMERA-RELATIVE MOVEMENT
+
+    Forward direction:
+    X = -sin(yaw)
+    Z = -cos(yaw)
+
+    Right direction:
+    X = cos(yaw)
+    Z = -sin(yaw)
+  */
 
   const moveX =
-    Math.sin(yaw) * forward +
-    Math.cos(yaw) * sideways;
+    (-Math.sin(yaw) * forward) +
+    (Math.cos(yaw) * sideways);
 
   const moveZ =
-    -Math.cos(yaw) * forward +
-    Math.sin(yaw) * sideways;
+    (-Math.cos(yaw) * forward) -
+    (Math.sin(yaw) * sideways);
 
   player.x += moveX * speed * delta;
   player.z += moveZ * speed * delta;
 
-  /* World Boundary */
+  /* World boundary */
 
-  player.x = THREE.MathUtils.clamp(player.x, -220, 220);
-  player.z = THREE.MathUtils.clamp(player.z, -220, 220);
+  player.x = THREE.MathUtils.clamp(player.x, -260, 260);
+  player.z = THREE.MathUtils.clamp(player.z, -260, 260);
 
-  /* Jump Physics */
+  /* Jump physics */
 
   if (!player.grounded) {
     player.velocityY -= 20 * delta;
@@ -626,7 +849,7 @@ function animate() {
     }
   }
 
-  /* First Person Camera */
+  /* First-person camera */
 
   camera.position.set(
     player.x,
@@ -640,33 +863,44 @@ function animate() {
     0
   );
 
-  /* Floating Particles */
+  /* Particle movement */
 
-  for (const particle of particles) {
-    particle.position.y += delta * 0.7;
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
 
-    if (particle.position.y > 60) {
-      particle.position.y = 1;
+    p.position.y += delta * 0.65;
+    p.position.x += Math.sin(time + i) * delta * 0.2;
+
+    if (p.position.y > 58) {
+      p.position.y = 1;
     }
   }
 
-  /* Glowing Leaf Animation */
-
-  const time = clock.elapsedTime;
+  /* Glowing leaves animation */
 
   for (let i = 0; i < glowingLeaves.length; i++) {
     const leaf = glowingLeaves[i];
 
-    leaf.rotation.y += delta * 0.5;
-    leaf.position.y += Math.sin(time + i) * delta * 0.08;
+    leaf.rotation.y += delta * 0.6;
+    leaf.rotation.x += delta * 0.15;
   }
+
+  /* Tree light pulse */
+
+  treeLight.intensity = 150 + Math.sin(time * 2) * 25;
+
+  /* Water movement */
+
+  river.position.y = 0.12 + Math.sin(time * 1.5) * 0.025;
 
   renderer.render(scene, camera);
 }
 
 animate();
 
-/* ---------------- RESIZE ---------------- */
+/* =====================================
+   RESIZE
+===================================== */
 
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -678,7 +912,7 @@ window.addEventListener("resize", () => {
   );
 
   renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio, 1.25)
+    Math.min(window.devicePixelRatio, 1.5)
   );
 });
 
