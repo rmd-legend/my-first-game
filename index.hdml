@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adventure Game</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #182b25;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+h1 { margin-top: 35px; }
+#game {
+  width: 90%;
+  max-width: 500px;
+  height: 350px;
+  margin: 25px auto;
+  background: linear-gradient(#8ac9e8, #d9e9a2 65%, #4d8b4c 65%);
+  border: 4px solid white;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+#hero {
+  position: absolute;
+  bottom: 20px;
+  left: 40px;
+  font-size: 45px;
+}
+#ground {
+  position: absolute;
+  bottom: 0;
+  height: 20px;
+  width: 100%;
+  background: #315e35;
+}
+button {
+  padding: 14px 25px;
+  margin: 5px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 17px;
+}
+</style>
+</head>
+<body>
+<h1>ADVENTURE</h1>
+<p>Our journey begins...</p>
+<div id="game">
+  <div id="hero">🧑</div>
+  <div id="ground"></div>
+</div>
+<button onclick="move(-20)">LEFT</button>
+<button onclick="move(20)">RIGHT</button>
+<script>
+let x = 40;
+function move(amount) {
+  x = Math.max(0, Math.min(420, x + amount));
+  document.getElementById("hero").style.left = x + "px";
+}
+</script>
+</body>
+</html>
