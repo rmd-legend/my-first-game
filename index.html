@@ -2,524 +2,197 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>3D Adventure World</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adventure World</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#87b9d8;font-family:Arial;touch-action:none}
-canvas{display:block}
-#ui{position:fixed;inset:0;pointer-events:none}
-#joystick{position:absolute;left:25px;bottom:35px;width:125px;height:125px;border-radius:50%;background:#ffffff25;border:2px solid #ffffff70;pointer-events:auto;touch-action:none}
-#stick{position:absolute;width:48px;height:48px;left:36px;top:36px;border-radius:50%;background:#ffffffbb;border:2px solid white}
-#jump{position:absolute;right:30px;bottom:45px;width:75px;height:75px;border-radius:50%;border:2px solid white;background:#ffffff55;color:white;font-size:16px;font-weight:bold;pointer-events:auto}
-#hint{position:absolute;top:15px;left:50%;transform:translateX(-50%);color:white;text-shadow:0 2px 5px black;font-size:13px;white-space:nowrap}
-#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#15251d;color:white;font-size:20px;z-index:5}
+html,body{margin:0;overflow:hidden;background:#87ceeb}
+#info{position:fixed;top:12px;left:12px;color:white;font:bold 16px Arial;text-shadow:1px 2px 4px black;z-index:2}
+#controls{position:fixed;bottom:25px;left:20px;right:20px;display:flex;justify-content:space-between;z-index:3}
+button{width:65px;height:65px;border:2px solid white;border-radius:50%;background:#2229;color:white;font-size:25px}
 </style>
 </head>
 <body>
-<div id="loading">Loading 3D World...</div>
-<div id="ui">
-<div id="hint">MOVE: Joystick | LOOK: Drag Screen | JUMP: Button</div>
-<div id="joystick"><div id="stick"></div></div>
-<button id="jump">JUMP</button>
+<div id="info">ADVENTURE WORLD</div>
+<div id="controls">
+<div>
+<button id="left">◀</button>
+<button id="right">▶</button>
 </div>
-
+<div>
+<button id="forward">▲</button>
+<button id="back">▼</button>
+<button id="jump">⬆</button>
+</div>
+</div>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9bc9e8);
-scene.fog = new THREE.FogExp2(0x9bc9e8, 0.0025);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87ceeb);
+scene.fog=new THREE.Fog(0x87ceeb,40,180);
 
-const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 900);
-
-const renderer = new THREE.WebGLRenderer({
-  antialias:true,
-  powerPreference:"high-performance"
-});
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
 renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.15;
 document.body.appendChild(renderer.domElement);
 
-// LIGHTING
-scene.add(new THREE.HemisphereLight(0xc9e7ff,0x52613b,2.0));
-
-const sun = new THREE.DirectionalLight(0xffedcf,3.0);
-sun.position.set(-70,110,60);
+scene.add(new THREE.HemisphereLight(0xffffff,0x526b39,2));
+const sun=new THREE.DirectionalLight(0xffffff,2);
+sun.position.set(30,60,20);
 sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-100;
-sun.shadow.camera.right=100;
-sun.shadow.camera.top=100;
-sun.shadow.camera.bottom=-100;
-sun.shadow.bias=-0.0003;
 scene.add(sun);
 
-// MATERIALS
-const groundMat = new THREE.MeshStandardMaterial({
-  color:0x567b3c, roughness:1
-});
-const grassMat = new THREE.MeshStandardMaterial({
-  color:0x789b49, roughness:1
-});
-const barkMat = new THREE.MeshStandardMaterial({
-  color:0x51351f, roughness:1
-});
-const leafMat = new THREE.MeshStandardMaterial({
-  color:0x28633b, roughness:0.9
-});
-const blueLeafMat = new THREE.MeshStandardMaterial({
-  color:0x35caff, emissive:0x0879bb, emissiveIntensity:1.8
-});
-const stoneMat = new THREE.MeshStandardMaterial({
-  color:0x777d7c, roughness:1
-});
-
-// GROUND
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(600,600),
-  groundMat
+// Ground
+const ground=new THREE.Mesh(
+new THREE.PlaneGeometry(300,300),
+new THREE.MeshStandardMaterial({color:0x477b39})
 );
 ground.rotation.x=-Math.PI/2;
 ground.receiveShadow=true;
 scene.add(ground);
 
-// DISTANT MOUNTAINS
-function makeMountain(x,z,sx,sy,sz,color){
-  const m=new THREE.Mesh(
-    new THREE.ConeGeometry(1,1,7),
-    new THREE.MeshStandardMaterial({color,roughness:1})
-  );
-  m.position.set(x,sy/2-1,z);
-  m.scale.set(sx,sy,sz);
-  m.rotation.y=Math.random()*2;
-  m.castShadow=true;
-  scene.add(m);
-}
-for(let i=0;i<28;i++){
-  const a=i/28*Math.PI*2;
-  const r=190+Math.random()*35;
-  makeMountain(Math.cos(a)*r,Math.sin(a)*r,
-    18+Math.random()*22,35+Math.random()*55,
-    18+Math.random()*20,0x718b85);
-}
-
-// ANCIENT TREE
-const tree = new THREE.Group();
-tree.position.set(0,0,0);
-scene.add(tree);
-
-const trunk = new THREE.Mesh(
-  new THREE.CylinderGeometry(2.1,3.1,15,12),
-  barkMat
+// Mountains
+for(let i=0;i<18;i++){
+const h=12+Math.random()*22;
+const m=new THREE.Mesh(
+new THREE.ConeGeometry(10+Math.random()*8,h,5),
+new THREE.MeshStandardMaterial({color:0x68756b})
 );
-trunk.position.y=7.5;
+m.position.set((Math.random()-.5)*180,h/2-1,-65-Math.random()*90);
+m.castShadow=true;
+scene.add(m);
+}
+
+// Trees
+function tree(x,z){
+const trunk=new THREE.Mesh(
+new THREE.CylinderGeometry(.45,.7,5,7),
+new THREE.MeshStandardMaterial({color:0x654321})
+);
+trunk.position.set(x,2.5,z);
 trunk.castShadow=true;
-trunk.receiveShadow=true;
-tree.add(trunk);
+scene.add(trunk);
 
-// Tree roots
-for(let i=0;i<9;i++){
-  const a=i*Math.PI*2/9;
-  const root=new THREE.Mesh(
-    new THREE.CylinderGeometry(0.2,0.8,7,7),
-    barkMat
-  );
-  root.position.set(Math.cos(a)*2,0.45,Math.sin(a)*2);
-  root.rotation.z=Math.cos(a)*0.8;
-  root.rotation.x=Math.sin(a)*0.8;
-  root.castShadow=true;
-  tree.add(root);
+for(let i=0;i<3;i++){
+const leaves=new THREE.Mesh(
+new THREE.ConeGeometry(3.3-i*.45,5,7),
+new THREE.MeshStandardMaterial({color:0x176b32})
+);
+leaves.position.set(x,5+i*1.6,z);
+leaves.castShadow=true;
+scene.add(leaves);
+}
+}
+for(let i=0;i<65;i++)tree((Math.random()-.5)*110,(Math.random()-.5)*110);
+
+// River
+const river=new THREE.Mesh(
+new THREE.PlaneGeometry(16,180),
+new THREE.MeshStandardMaterial({color:0x218dcc,roughness:.25,metalness:.15})
+);
+river.rotation.x=-Math.PI/2;
+river.position.set(25,.04,0);
+scene.add(river);
+
+// Bridge
+const bridge=new THREE.Mesh(
+new THREE.BoxGeometry(22,.7,5),
+new THREE.MeshStandardMaterial({color:0x795438})
+);
+bridge.position.set(25,.6,0);
+scene.add(bridge);
+
+// Rocks
+for(let i=0;i<25;i++){
+const rock=new THREE.Mesh(
+new THREE.DodecahedronGeometry(1+Math.random()*2,1),
+new THREE.MeshStandardMaterial({color:0x777777})
+);
+rock.position.set((Math.random()-.5)*100,.8,(Math.random()-.5)*100);
+rock.castShadow=true;
+scene.add(rock);
 }
 
-// Branches
-for(let i=0;i<7;i++){
-  const b=new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25,0.65,8,8),
-    barkMat
-  );
-  const a=i*Math.PI*2/7;
-  b.position.set(Math.cos(a)*3,12,Math.sin(a)*3);
-  b.rotation.z=Math.cos(a)*0.8;
-  b.rotation.x=Math.sin(a)*0.8;
-  tree.add(b);
-}
-
-// Tree canopy
-for(let i=0;i<22;i++){
-  const leaf=new THREE.Mesh(
-    new THREE.IcosahedronGeometry(4+Math.random()*2,1),
-    leafMat
-  );
-  leaf.position.set(
-    (Math.random()-.5)*19,
-    15+Math.random()*12,
-    (Math.random()-.5)*19
-  );
-  leaf.scale.y=0.8+Math.random()*0.7;
-  leaf.castShadow=true;
-  tree.add(leaf);
-}
-
-// Glowing blue leaves
-for(let i=0;i<35;i++){
-  const leaf=new THREE.Mesh(
-    new THREE.IcosahedronGeometry(0.22+Math.random()*0.2,1),
-    blueLeafMat
-  );
-  leaf.position.set(
-    (Math.random()-.5)*17,
-    12+Math.random()*15,
-    (Math.random()-.5)*17
-  );
-  tree.add(leaf);
-}
-
-// STONES
-const obstacles=[];
-function makeStone(x,z,size){
-  const rock=new THREE.Mesh(
-    new THREE.DodecahedronGeometry(size,1),
-    stoneMat
-  );
-  rock.position.set(x,size*0.65,z);
-  rock.scale.set(1.2,0.8,1);
-  rock.rotation.set(Math.random(),Math.random(),Math.random());
-  rock.castShadow=true;
-  rock.receiveShadow=true;
-  scene.add(rock);
-  obstacles.push({x,z,r:size*1.35});
-}
-[
-  [-9,8,2.2],[10,7,2.4],[-12,-9,2.8],[13,-8,2],
-  [-20,15,3],[20,18,3],[23,-14,2.5],[-25,-18,3],
-  [7,25,2],[-8,28,2.5]
-].forEach(v=>makeStone(...v));
-
-// FOREST
-for(let i=0;i<95;i++){
-  const x=(Math.random()-.5)*170;
-  const z=(Math.random()-.5)*170;
-  if(Math.hypot(x,z)<23) continue;
-
-  const group=new THREE.Group();
-  group.position.set(x,0,z);
-
-  const height=5+Math.random()*5;
-  const stem=new THREE.Mesh(
-    new THREE.CylinderGeometry(0.25,0.55,height,7),
-    barkMat
-  );
-  stem.position.y=height/2;
-  stem.castShadow=true;
-  group.add(stem);
-
-  for(let j=0;j<3;j++){
-    const crown=new THREE.Mesh(
-      new THREE.ConeGeometry(2.7-j*.4,4.5,7),
-      leafMat
-    );
-    crown.position.y=height*.65+j*1.9;
-    crown.castShadow=true;
-    group.add(crown);
-  }
-  scene.add(group);
-  obstacles.push({x,z,r:1.5});
-}
-
-// GRASS INSTANCES
-const grassGeo=new THREE.ConeGeometry(0.13,0.8,4);
-const grass=new THREE.InstancedMesh(grassGeo,grassMat,2500);
-const dummy=new THREE.Object3D();
-for(let i=0;i<2500;i++){
-  dummy.position.set((Math.random()-.5)*260,0.35,(Math.random()-.5)*260);
-  dummy.rotation.y=Math.random()*Math.PI;
-  dummy.scale.setScalar(0.5+Math.random()*1.1);
-  dummy.updateMatrix();
-  grass.setMatrixAt(i,dummy.matrix);
-}
-scene.add(grass);
-
-// PLAYER CHARACTER
+// Temporary player character
 const player=new THREE.Group();
-scene.add(player);
+const skin=new THREE.MeshStandardMaterial({color:0xd99a70});
+const shirt=new THREE.MeshStandardMaterial({color:0x2456a5});
+const pants=new THREE.MeshStandardMaterial({color:0x252b38});
 
-const body=new THREE.Group();
+const body=new THREE.Mesh(new THREE.BoxGeometry(1,1.5,.55),shirt);
+body.position.y=2;
 player.add(body);
 
-const skin=new THREE.MeshStandardMaterial({color:0xc98e65,roughness:0.8});
-const shirt=new THREE.MeshStandardMaterial({color:0x2d4d83,roughness:0.85});
-const pants=new THREE.MeshStandardMaterial({color:0x292c38,roughness:0.9});
-const hair=new THREE.MeshStandardMaterial({color:0x171311,roughness:1});
-const shoes=new THREE.MeshStandardMaterial({color:0x24201e,roughness:0.9});
+const head=new THREE.Mesh(new THREE.SphereGeometry(.42,16,16),skin);
+head.position.y=3.05;
+player.add(head);
 
-function part(parent,geo,mat,x,y,z,sx=1,sy=1,sz=1){
-  const mesh=new THREE.Mesh(geo,mat);
-  mesh.position.set(x,y,z);
-  mesh.scale.set(sx,sy,sz);
-  mesh.castShadow=true;
-  mesh.receiveShadow=true;
-  parent.add(mesh);
-  return mesh;
+const legs=[];
+for(let x of [-.27,.27]){
+const leg=new THREE.Mesh(new THREE.BoxGeometry(.35,1,.4),pants);
+leg.position.set(x,.75,0);
+player.add(leg);legs.push(leg);
 }
+scene.add(player);
+player.position.set(0,0,0);
 
-// Torso
-part(body,new THREE.CapsuleGeometry(0.48,0.8,5,10),shirt,0,1.55,0,1,1,0.75);
-
-// Neck and head
-part(body,new THREE.CylinderGeometry(0.16,0.18,0.25,10),skin,0,2.25,0);
-part(body,new THREE.SphereGeometry(0.36,16,12),skin,0,2.65,0);
-
-// Hair
-part(body,new THREE.SphereGeometry(0.37,14,10),hair,0,2.84,-0.04,1,0.55,1);
-part(body,new THREE.BoxGeometry(0.55,0.18,0.28),hair,0,2.75,0.25);
-
-// Eyes
-const eyeMat=new THREE.MeshStandardMaterial({color:0x171717});
-part(body,new THREE.SphereGeometry(0.045,8,8),eyeMat,-0.13,2.67,0.315);
-part(body,new THREE.SphereGeometry(0.045,8,8),eyeMat,0.13,2.67,0.315);
-
-// Arms
-const armL=new THREE.Group();
-const armR=new THREE.Group();
-armL.position.set(-0.55,1.95,0);
-armR.position.set(0.55,1.95,0);
-body.add(armL,armR);
-part(armL,new THREE.CapsuleGeometry(0.15,0.65,4,8),shirt,0,-0.38,0);
-part(armR,new THREE.CapsuleGeometry(0.15,0.65,4,8),shirt,0,-0.38,0);
-part(armL,new THREE.SphereGeometry(0.16,10,8),skin,0,-0.82,0);
-part(armR,new THREE.SphereGeometry(0.16,10,8),skin,0,-0.82,0);
-
-// Legs
-const legL=new THREE.Group();
-const legR=new THREE.Group();
-legL.position.set(-0.25,1.05,0);
-legR.position.set(0.25,1.05,0);
-body.add(legL,legR);
-part(legL,new THREE.CapsuleGeometry(0.19,0.65,4,8),pants,0,-0.42,0);
-part(legR,new THREE.CapsuleGeometry(0.19,0.65,4,8),pants,0,-0.42,0);
-part(legL,new THREE.BoxGeometry(0.35,0.18,0.55),shoes,0,-0.88,0.12);
-part(legR,new THREE.BoxGeometry(0.35,0.18,0.55),shoes,0,-0.88,0.12);
-
-// Initial player position
-player.position.set(0,0,35);
-
-// COLLISION
-const treeRadius=4.0;
-const playerRadius=0.85;
-
-function collides(x,z){
-  if(Math.hypot(x,z)<treeRadius+playerRadius) return true;
-
-  for(const o of obstacles){
-    if(Math.hypot(x-o.x,z-o.z)<o.r+playerRadius) return true;
-  }
-  return false;
-}
-
-// CONTROLS
-let moveX=0,moveY=0;
-let yaw=0;
-let pitch=0;
-let jumping=false;
-let velocityY=0;
-let grounded=true;
-let walkTime=0;
-
-const joystick=document.getElementById("joystick");
-const stick=document.getElementById("stick");
-let joyPointer=null;
-
-joystick.addEventListener("pointerdown",e=>{
-  joyPointer=e.pointerId;
-  joystick.setPointerCapture(e.pointerId);
-  updateJoy(e);
-});
-joystick.addEventListener("pointermove",e=>{
-  if(e.pointerId===joyPointer) updateJoy(e);
-});
-function updateJoy(e){
-  const r=joystick.getBoundingClientRect();
-  const dx=e.clientX-(r.left+r.width/2);
-  const dy=e.clientY-(r.top+r.height/2);
-  const len=Math.min(43,Math.hypot(dx,dy));
-  const a=Math.atan2(dy,dx);
-  const px=Math.cos(a)*len;
-  const py=Math.sin(a)*len;
-  stick.style.left=(36+px)+"px";
-  stick.style.top=(36+py)+"px";
-  moveX=px/43;
-  moveY=-py/43;
-}
-function resetJoy(){
-  joyPointer=null;
-  moveX=0;moveY=0;
-  stick.style.left="36px";
-  stick.style.top="36px";
-}
-joystick.addEventListener("pointerup",resetJoy);
-joystick.addEventListener("pointercancel",resetJoy);
-
-document.getElementById("jump").addEventListener("pointerdown",()=>{
-  if(grounded){
-    velocityY=8.5;
-    grounded=false;
-  }
-});
-
-// Drag to look
-let lookPointer=null,lastX=0,lastY=0;
-renderer.domElement.addEventListener("pointerdown",e=>{
-  if(e.clientX<160 && e.clientY>innerHeight-180) return;
-  if(e.clientX>innerWidth-130 && e.clientY>innerHeight-150) return;
-  lookPointer=e.pointerId;
-  lastX=e.clientX;
-  lastY=e.clientY;
-  renderer.domElement.setPointerCapture(e.pointerId);
-});
-renderer.domElement.addEventListener("pointermove",e=>{
-  if(e.pointerId!==lookPointer)return;
-  const dx=e.clientX-lastX;
-  const dy=e.clientY-lastY;
-  yaw-=dx*0.005;
-  pitch=Math.max(-0.25,Math.min(0.45,pitch+dy*0.003));
-  lastX=e.clientX;
-  lastY=e.clientY;
-});
-renderer.domElement.addEventListener("pointerup",()=>lookPointer=null);
-renderer.domElement.addEventListener("pointercancel",()=>lookPointer=null);
-
-// KEYBOARD
+// Movement
 const keys={};
-addEventListener("keydown",e=>keys[e.code]=true);
-addEventListener("keyup",e=>keys[e.code]=false);
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
-function getMovement(){
-  let forward=moveY;
-  let side=moveX;
-  if(keys.KeyW||keys.ArrowUp)forward=1;
-  if(keys.KeyS||keys.ArrowDown)forward=-1;
-  if(keys.KeyA||keys.ArrowLeft)side=-1;
-  if(keys.KeyD||keys.ArrowRight)side=1;
-  if(keys.Space&&grounded){
-    velocityY=8.5;grounded=false;
-  }
-  return {forward,side};
+let moving=false,velocityY=0;
+function bind(id,key){
+const b=document.getElementById(id);
+b.onpointerdown=e=>{e.preventDefault();keys[key]=true};
+b.onpointerup=b.onpointerleave=b.onpointercancel=()=>keys[key]=false;
 }
+bind('left','a');bind('right','d');
+bind('forward','w');bind('back','s');
 
-// CAMERA
-const cameraTarget=new THREE.Vector3();
-camera.position.set(0,4,43);
+document.getElementById('jump').onpointerdown=()=>{
+if(player.position.y<=0.01)velocityY=9;
+};
 
-function updateCamera(dt){
-  const distance=7.5;
-  const targetX=player.position.x+Math.sin(yaw)*distance;
-  const targetZ=player.position.z+Math.cos(yaw)*distance;
-  const targetY=player.position.y+3.5+pitch*3;
-
-  camera.position.x=THREE.MathUtils.damp(camera.position.x,targetX,5,dt);
-  camera.position.y=THREE.MathUtils.damp(camera.position.y,targetY,5,dt);
-  camera.position.z=THREE.MathUtils.damp(camera.position.z,targetZ,5,dt);
-
-  cameraTarget.set(player.position.x,player.position.y+1.6,player.position.z);
-  camera.lookAt(cameraTarget);
-}
-
-// SKY SUN
-const sunBall=new THREE.Mesh(
-  new THREE.SphereGeometry(7,16,12),
-  new THREE.MeshBasicMaterial({color:0xffe5a3})
-);
-sunBall.position.set(-100,100,-180);
-scene.add(sunBall);
-
-// ANIMATION LOOP
 const clock=new THREE.Clock();
-
 function animate(){
-  requestAnimationFrame(animate);
-  const dt=Math.min(clock.getDelta(),0.04);
+requestAnimationFrame(animate);
+const dt=Math.min(clock.getDelta(),.04);
+moving=false;
 
-  const {forward,side}=getMovement();
+if(keys.w||keys.arrowup){player.position.z-=12*dt;moving=true}
+if(keys.s||keys.arrowdown){player.position.z+=12*dt;moving=true}
+if(keys.a||keys.arrowleft){player.position.x-=12*dt;moving=true}
+if(keys.d||keys.arrowright){player.position.x+=12*dt;moving=true}
 
-  const frontX=-Math.sin(yaw);
-  const frontZ=-Math.cos(yaw);
-  const rightX=Math.cos(yaw);
-  const rightZ=-Math.sin(yaw);
-
-  let dx=(frontX*forward+rightX*side);
-  let dz=(frontZ*forward+rightZ*side);
-
-  const length=Math.hypot(dx,dz);
-  if(length>1){dx/=length;dz/=length;}
-
-  const speed=7.0;
-  const nextX=player.position.x+dx*speed*dt;
-  const nextZ=player.position.z+dz*speed*dt;
-
-  // Separate-axis collision allows sliding around obstacles
-  if(!collides(nextX,player.position.z)){
-    player.position.x=nextX;
-  }
-  if(!collides(player.position.x,nextZ)){
-    player.position.z=nextZ;
-  }
-
-  // Character faces movement direction
-  if(length>0.08){
-    const angle=Math.atan2(-dx,-dz);
-    player.rotation.y=THREE.MathUtils.damp(
-      player.rotation.y,angle,12,dt
-    );
-    walkTime+=dt*11;
-    legL.rotation.x=Math.sin(walkTime)*0.65;
-    legR.rotation.x=-Math.sin(walkTime)*0.65;
-    armL.rotation.x=-Math.sin(walkTime)*0.5;
-    armR.rotation.x=Math.sin(walkTime)*0.5;
-  }else{
-    legL.rotation.x=THREE.MathUtils.damp(legL.rotation.x,0,8,dt);
-    legR.rotation.x=THREE.MathUtils.damp(legR.rotation.x,0,8,dt);
-    armL.rotation.x=THREE.MathUtils.damp(armL.rotation.x,0,8,dt);
-    armR.rotation.x=THREE.MathUtils.damp(armR.rotation.x,0,8,dt);
-  }
-
-  // Jump physics
-  if(!grounded){
-    velocityY-=20*dt;
-    player.position.y+=velocityY*dt;
-    if(player.position.y<=0){
-      player.position.y=0;
-      velocityY=0;
-      grounded=true;
-    }
-  }
-
-  // Blue leaves glow animation
-  tree.children.forEach((obj,i)=>{
-    if(obj.material===blueLeafMat){
-      obj.position.y+=Math.sin(clock.elapsedTime*1.5+i)*0.0008;
-    }
-  });
-
-  updateCamera(dt);
-  renderer.render(scene,camera);
+if(moving){
+const angle=Math.atan2(
+(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),
+(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0)
+);
+player.rotation.y=angle;
 }
 
-animate();
-document.getElementById("loading").style.display="none";
+velocityY-=22*dt;
+player.position.y+=velocityY*dt;
+if(player.position.y<0){player.position.y=0;velocityY=0}
 
-// RESIZE
-addEventListener("resize",()=>{
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
-});
+camera.position.lerp(
+new THREE.Vector3(player.position.x,player.position.y+7,player.position.z+11),.08
+);
+camera.lookAt(player.position.x,player.position.y+1.5,player.position.z);
+
+renderer.render(scene,camera);
+}
+animate();
+
+onresize=()=>{
+camera.aspect=innerWidth/innerHeight;
+camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);
+};
 </script>
 </body>
 </html>
